@@ -45,7 +45,7 @@ const Layout = ({ children }) => {
               🪔
             </span>
             <span className="truncate text-sm font-bold tracking-tight">
-              Ganpati Fund
+              Fund Manager
             </span>
           </div>
           <button

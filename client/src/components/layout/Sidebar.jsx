@@ -203,7 +203,7 @@ const Sidebar = ({
             </div>
             <div className="min-w-0">
               <h1 className="text-lg font-bold text-[var(--color-text-primary)] truncate">
-                Ganpati Fund
+                Fund Manager
               </h1>
               <p className="text-xs text-[var(--color-text-tertiary)]">
                 Mandal Manager

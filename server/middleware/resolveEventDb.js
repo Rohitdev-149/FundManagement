@@ -1,8 +1,7 @@
 const { getEventModels } = require("../utils/eventDatabase");
 
 const resolveEventDb = async (req, res, next) => {
-  let eventId =
-    req.params.eventId || req.query.eventId || req.body?.eventId;
+  let eventId = req.params.eventId || req.query.eventId || req.body?.eventId;
 
   // Event-scoped roles can ONLY ever use their own assigned event — server enforces this,
   // ignoring whatever eventId the client sent

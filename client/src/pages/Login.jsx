@@ -24,7 +24,7 @@ const Login = () => {
             🪔
           </div>
           <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">
-            Ganpati Fund
+            Fund Manager
           </h1>
           <p className="text-[var(--color-text-secondary)] mt-1">
             Mandal Fund Manager

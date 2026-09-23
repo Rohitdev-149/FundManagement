@@ -12,9 +12,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "icons.svg"],
       manifest: {
-        name: "Ganpati Mandal Fund Manager",
-        short_name: "Ganpati Fund",
-        description: "Contribution & expense tracker for Ganpati mandal events",
+        name: "Community Fund Manager",
+        short_name: "Fund Manager",
+        description: "Contribution and expense tracker for community events",
         theme_color: "#f97316",
         background_color: "#ffffff",
         display: "standalone",

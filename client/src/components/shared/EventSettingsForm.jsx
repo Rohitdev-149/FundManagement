@@ -57,7 +57,7 @@ const EventSettingsForm = ({ mode, existingEvent, onSaved, onCancel }) => {
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="e.g. Ganpati 2027"
+        placeholder="e.g. Community Festival 2027"
         required
         className="w-full border rounded-lg px-3 py-2 text-sm"
       />

@@ -138,7 +138,9 @@ const UserManagement = () => {
           />
           <input
             type="password"
-            placeholder={editingUser ? "New password (optional)" : "Set a password"}
+            placeholder={
+              editingUser ? "New password (optional)" : "Set a password"
+            }
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required={!editingUser}

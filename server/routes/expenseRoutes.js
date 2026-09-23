@@ -31,10 +31,19 @@ const expenseValidation = [
   optionalText("note"),
 ];
 const expenseUpdateValidation = [
-  body("categoryId").optional().isMongoId().withMessage("categoryId must be a valid ID"),
+  body("categoryId")
+    .optional()
+    .isMongoId()
+    .withMessage("categoryId must be a valid ID"),
   body("name").optional().trim().notEmpty().withMessage("name is required"),
-  body("amount").optional().isFloat({ gt: 0 }).withMessage("amount must be greater than 0"),
-  body("paymentMode").optional().isIn(PAYMENT_MODES).withMessage("paymentMode is invalid"),
+  body("amount")
+    .optional()
+    .isFloat({ gt: 0 })
+    .withMessage("amount must be greater than 0"),
+  body("paymentMode")
+    .optional()
+    .isIn(PAYMENT_MODES)
+    .withMessage("paymentMode is invalid"),
   dateField("date", false),
   optionalText("vendor"),
   optionalText("note"),

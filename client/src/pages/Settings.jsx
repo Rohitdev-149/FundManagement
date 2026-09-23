@@ -107,7 +107,7 @@ const Settings = () => {
 
       {/* App info */}
       <section className="bg-white rounded-xl shadow-sm p-4 text-center text-xs text-gray-400">
-        Ganpati Mandal Fund Manager
+        Community Fund Manager
       </section>
     </div>
   );

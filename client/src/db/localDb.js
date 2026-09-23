@@ -1,6 +1,6 @@
 import { openDB } from "idb";
 
-const DB_NAME = "ganpati-offline-db";
+const DB_NAME = "fund-manager-offline-db";
 const DB_VERSION = 1;
 
 export const dbPromise = openDB(DB_NAME, DB_VERSION, {

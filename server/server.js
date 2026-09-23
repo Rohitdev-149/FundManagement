@@ -60,7 +60,7 @@ app.use("/api/categories", require("./routes/categoryRoutes"));
 app.use("/api/expenses", require("./routes/expenseRoutes"));
 app.use("/api", require("./routes/dashboardRoutes"));
 
-app.get("/", (req, res) => res.send("Ganpati App API running"));
+app.get("/", (req, res) => res.send("Fund Manager API running"));
 app.get("/health", (req, res) => {
   const databaseReady = mongoose.connection.readyState === 1;
   return res.status(databaseReady ? 200 : 503).json({

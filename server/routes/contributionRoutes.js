@@ -39,11 +39,23 @@ const contributionValidation = [
   optionalText("note"),
 ];
 const contributionUpdateValidation = [
-  body("contributorId").optional().isMongoId().withMessage("contributorId must be a valid ID"),
-  body("amount").optional().isFloat({ min: 0 }).withMessage("amount must be zero or more"),
-  body("paymentMode").optional().isIn(PAYMENT_MODES).withMessage("paymentMode is invalid"),
+  body("contributorId")
+    .optional()
+    .isMongoId()
+    .withMessage("contributorId must be a valid ID"),
+  body("amount")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("amount must be zero or more"),
+  body("paymentMode")
+    .optional()
+    .isIn(PAYMENT_MODES)
+    .withMessage("paymentMode is invalid"),
   dateField("date", false),
-  body("status").optional().isIn(CONTRIBUTION_STATUSES).withMessage("status is invalid"),
+  body("status")
+    .optional()
+    .isIn(CONTRIBUTION_STATUSES)
+    .withMessage("status is invalid"),
   nonNegativeAmount("expectedAmount"),
   optionalText("referenceId"),
   optionalText("note"),
