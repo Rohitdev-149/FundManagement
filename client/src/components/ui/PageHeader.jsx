@@ -14,7 +14,7 @@ const PageHeader = forwardRef(
       actions,
       breadcrumbs,
       className = "",
-      showDivider = true,
+      showDivider: _showDivider = true,
     },
     ref,
   ) => {

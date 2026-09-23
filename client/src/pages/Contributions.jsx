@@ -5,8 +5,16 @@ import { getContributions, deleteContribution } from "../api/contributionApi";
 import ContributionForm from "../components/contributions/ContributionForm";
 import ContributionList from "../components/contributions/ContributionList";
 import RoleGate from "../components/shared/RoleGate";
-import { Button, Card, Badge, EmptyState, LoadingSkeleton, Input, Select } from "../components/ui";
-import { formatCurrency, formatDate } from "../utils/format";
+import {
+  Button,
+  Card,
+  Badge,
+  EmptyState,
+  LoadingSkeleton,
+  Input,
+  Select,
+} from "../components/ui";
+import { formatCurrency } from "../utils/format";
 
 const Contributions = () => {
   const { currentEvent } = useEvent();
@@ -59,7 +67,7 @@ const Contributions = () => {
         (c) =>
           c.contributorId?.name?.toLowerCase().includes(searchLower) ||
           c.note?.toLowerCase().includes(searchLower) ||
-          formatCurrency(c.amount).includes(search)
+          formatCurrency(c.amount).includes(search),
       );
     }
     if (statusFilter !== "all") {
@@ -86,7 +94,7 @@ const Contributions = () => {
     if (!confirm("Are you sure you want to delete this contribution?")) return;
     setError("");
     try {
-      await deleteContribution(id);
+      await deleteContribution(id, currentEvent._id);
       loadData();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to delete contribution");
@@ -105,7 +113,9 @@ const Contributions = () => {
   }
 
   const stats = {
-    paid: contributions.filter((c) => c.status === "paid").reduce((sum, c) => sum + Number(c.amount || 0), 0),
+    paid: contributions
+      .filter((c) => c.status === "paid")
+      .reduce((sum, c) => sum + Number(c.amount || 0), 0),
     partial: contributions.filter((c) => c.status === "partial").length,
     pending: contributions.filter((c) => c.status === "pending").length,
   };
@@ -115,11 +125,31 @@ const Contributions = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Contributions</h1>
-          <p className="page-subtitle">Received, partial, and pending entries</p>
+          <p className="page-subtitle">
+            Received, partial, and pending entries
+          </p>
         </div>
         <RoleGate allow={["admin", "treasurer"]}>
           {!showForm && (
-            <Button onClick={() => setShowForm(true)} leftIcon={<svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>}>
+            <Button
+              onClick={() => setShowForm(true)}
+              leftIcon={
+                <svg
+                  className="size-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
+                </svg>
+              }
+            >
               Add Contribution
             </Button>
           )}
@@ -127,8 +157,22 @@ const Contributions = () => {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-[var(--color-error-light)] text-[var(--color-error)] text-sm mb-4" role="alert">
-          <svg className="size-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 001.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
+        <div
+          className="flex items-center gap-2 p-3 rounded-xl bg-[var(--color-error-light)] text-[var(--color-error)] text-sm mb-4"
+          role="alert"
+        >
+          <svg
+            className="size-5 flex-shrink-0"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+            aria-hidden="true"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 001.414-1.414L10 8.586 8.707 7.293z"
+              clipRule="evenodd"
+            />
+          </svg>
           <span>{error}</span>
         </div>
       )}
@@ -140,7 +184,22 @@ const Contributions = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1"
-            leftIcon={<svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>}
+            leftIcon={
+              <svg
+                className="size-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            }
           />
           <Select
             options={[
@@ -168,8 +227,14 @@ const Contributions = () => {
         </div>
       </Card>
 
-      <div className="flex flex-wrap gap-2 mb-4" role="status" aria-live="polite">
-        <Badge variant="success">{stats.paid > 0 ? formatCurrency(stats.paid) : "0"} Paid</Badge>
+      <div
+        className="flex flex-wrap gap-2 mb-4"
+        role="status"
+        aria-live="polite"
+      >
+        <Badge variant="success">
+          {stats.paid > 0 ? formatCurrency(stats.paid) : "0"} Paid
+        </Badge>
         <Badge variant="warning">{stats.partial} Partial</Badge>
         <Badge variant="neutral">{stats.pending} Pending</Badge>
       </div>
@@ -190,18 +255,32 @@ const Contributions = () => {
       )}
 
       {loading ? (
-        <div className="space-y-2" aria-busy="true" aria-label="Loading contributions">
+        <div
+          className="space-y-2"
+          aria-busy="true"
+          aria-label="Loading contributions"
+        >
           {[...Array(5)].map((_, i) => (
             <LoadingSkeleton key={i} variant="row" />
           ))}
         </div>
       ) : filteredContributions.length === 0 ? (
         <EmptyState
-          title={search || statusFilter !== "all" || modeFilter !== "all" ? "No matches found" : "No contributions yet"}
-          description={search || statusFilter !== "all" || modeFilter !== "all"
-            ? "Try adjusting your search or filters."
-            : "Add your first contribution to get started."}
-          action={!search && statusFilter === "all" && modeFilter === "all" ? () => setShowForm(true) : undefined}
+          title={
+            search || statusFilter !== "all" || modeFilter !== "all"
+              ? "No matches found"
+              : "No contributions yet"
+          }
+          description={
+            search || statusFilter !== "all" || modeFilter !== "all"
+              ? "Try adjusting your search or filters."
+              : "Add your first contribution to get started."
+          }
+          action={
+            !search && statusFilter === "all" && modeFilter === "all"
+              ? () => setShowForm(true)
+              : undefined
+          }
           actionLabel="Add Contribution"
         />
       ) : (

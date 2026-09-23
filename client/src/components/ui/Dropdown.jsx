@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import Button from "./Button";
 
 const Dropdown = ({
   trigger,
@@ -15,7 +14,12 @@ const Dropdown = ({
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target) && triggerRef.current && !triggerRef.current.contains(e.target)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target)
+      ) {
         setIsOpen(false);
       }
     };
@@ -55,9 +59,17 @@ const Dropdown = ({
         disabled={item.disabled}
         role="menuitem"
       >
-        {item.icon && <span className="size-4" aria-hidden="true">{item.icon}</span>}
+        {item.icon && (
+          <span className="size-4" aria-hidden="true">
+            {item.icon}
+          </span>
+        )}
         <span>{item.label}</span>
-        {item.shortcut && <span className="ml-auto text-xs text-[var(--color-text-tertiary)]">{item.shortcut}</span>}
+        {item.shortcut && (
+          <span className="ml-auto text-xs text-[var(--color-text-tertiary)]">
+            {item.shortcut}
+          </span>
+        )}
       </button>
     );
   });
@@ -69,20 +81,26 @@ const Dropdown = ({
   };
 
   return (
-    <div className={`dropdown-trigger relative inline-block ${className}`} ref={dropdownRef}>
+    <div
+      className={`dropdown-trigger relative inline-block ${className}`}
+      ref={dropdownRef}
+    >
       <div ref={triggerRef}>
-        {typeof trigger === "function" ? trigger({ isOpen, toggle: () => setIsOpen(!isOpen) }) : trigger}
+        {typeof trigger === "function"
+          ? trigger({ isOpen, toggle: () => setIsOpen(!isOpen) })
+          : trigger}
       </div>
-      {isOpen && createPortal(
-        <div
-          className={`dropdown-menu ${alignClasses[align]}`}
-          role="menu"
-          aria-orientation="vertical"
-        >
-          {menuItems}
-        </div>,
-        document.body
-      )}
+      {isOpen &&
+        createPortal(
+          <div
+            className={`dropdown-menu ${alignClasses[align]}`}
+            role="menu"
+            aria-orientation="vertical"
+          >
+            {menuItems}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };

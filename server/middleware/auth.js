@@ -14,6 +14,11 @@ const protect = async (req, res, next) => {
     req.user = await User.findById(decoded.id).select("-passwordHash");
     if (!req.user)
       return res.status(401).json({ message: "User no longer exists" });
+    if (req.user.role !== "superadmin" && !req.user.assignedEventId) {
+      return res
+        .status(403)
+        .json({ message: "No event is assigned to this user" });
+    }
     next();
   } catch (err) {
     return res.status(401).json({ message: "Not authorized, invalid token" });

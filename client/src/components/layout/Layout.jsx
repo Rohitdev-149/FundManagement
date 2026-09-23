@@ -9,7 +9,6 @@ import { Avatar } from "../ui";
 const Header = ({ sidebarOpen, setSidebarOpen, user, onLogout }) => {
   const { currentEvent, events, selectEvent } = useContext(EventContext);
   const navigate = useNavigate();
-  const location = useLocation();
 
   const handleEventChange = (e) => {
     const eventId = e.target.value;
@@ -113,9 +112,9 @@ const Header = ({ sidebarOpen, setSidebarOpen, user, onLogout }) => {
   );
 };
 
-const Layout = ({ children }) => {
+const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed] = useState(false);
   const { user, logout } = useContext(AuthContext);
   const { currentEvent, events, selectEvent } = useContext(EventContext);
   const location = useLocation();

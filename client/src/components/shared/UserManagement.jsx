@@ -1,15 +1,25 @@
 import { useState, useEffect } from "react";
-import { createUser, getUsers, updateUserRole } from "../../api/userApi";
+import {
+  createUser,
+  deleteUser,
+  getUsers,
+  updateUser,
+  updateUserRole,
+} from "../../api/userApi";
 import { useAuth } from "../../context/authContext";
+import { useEvent } from "../../context/eventContext";
 
 const UserManagement = () => {
   const { user: currentUser } = useAuth();
+  const { events } = useEvent();
   const [users, setUsers] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("viewer");
+  const [assignedEventId, setAssignedEventId] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -30,17 +40,55 @@ const UserManagement = () => {
     setError("");
     setSaving(true);
     try {
-      await createUser({ name, phone, password, role });
+      const payload = {
+        name,
+        phone,
+        ...(editingUser?.role === "superadmin" ? {} : { role }),
+        ...(password ? { password } : {}),
+        ...(currentUser.role === "superadmin" && { assignedEventId }),
+      };
+      if (editingUser) {
+        await updateUser(editingUser._id, payload);
+      } else {
+        await createUser({ ...payload, password });
+      }
       setName("");
       setPhone("");
       setPassword("");
       setRole("viewer");
+      setAssignedEventId("");
       setShowForm(false);
-      loadUsers();
+      setEditingUser(null);
+      await loadUsers();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to create user");
+      setError(
+        err.response?.data?.message ||
+          (editingUser ? "Failed to update user" : "Failed to create user"),
+      );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const startEditing = (managedUser) => {
+    setEditingUser(managedUser);
+    setName(managedUser.name);
+    setPhone(managedUser.phone);
+    setPassword("");
+    setRole(managedUser.role);
+    setAssignedEventId(managedUser.assignedEventId || "");
+    setShowForm(true);
+    setError("");
+  };
+
+  const handleDelete = async (managedUser) => {
+    if (managedUser._id === currentUser._id) return;
+    if (!window.confirm(`Delete ${managedUser.name}'s account?`)) return;
+    try {
+      await deleteUser(managedUser._id);
+      loadUsers();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to delete user");
     }
   };
 
@@ -90,15 +138,16 @@ const UserManagement = () => {
           />
           <input
             type="password"
-            placeholder="Set a password"
+            placeholder={editingUser ? "New password (optional)" : "Set a password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            required
+            required={!editingUser}
             className="w-full border rounded-lg px-3 py-2 text-sm"
           />
           <select
             value={role}
             onChange={(e) => setRole(e.target.value)}
+            disabled={editingUser?.role === "superadmin"}
             className="w-full border rounded-lg px-3 py-2 text-sm"
           >
             <option value="viewer">Viewer — can only look</option>
@@ -107,6 +156,21 @@ const UserManagement = () => {
             </option>
             <option value="admin">Admin — full access</option>
           </select>
+          {currentUser.role === "superadmin" && (
+            <select
+              value={assignedEventId}
+              onChange={(e) => setAssignedEventId(e.target.value)}
+              required
+              className="w-full border rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">Select assigned event</option>
+              {events.map((event) => (
+                <option key={event._id} value={event._id}>
+                  {event.name}
+                </option>
+              ))}
+            </select>
+          )}
           {error && <p className="text-red-500 text-xs">{error}</p>}
           <div className="flex gap-2">
             <button
@@ -114,7 +178,11 @@ const UserManagement = () => {
               disabled={saving}
               className="flex-1 bg-orange-600 text-white rounded-lg py-2 text-sm font-semibold disabled:opacity-50"
             >
-              {saving ? "Creating..." : "Create User"}
+              {saving
+                ? "Saving..."
+                : editingUser
+                  ? "Save Changes"
+                  : "Create User"}
             </button>
             <button
               type="button"
@@ -140,16 +208,34 @@ const UserManagement = () => {
                 <p className="text-sm font-medium">{u.name}</p>
                 <p className="text-xs text-gray-500">{u.phone}</p>
               </div>
-              <select
-                value={u.role}
-                onChange={(e) => handleRoleChange(u._id, e.target.value)}
-                disabled={u._id === currentUser._id}
-                className="text-xs border rounded-lg px-2 py-1 capitalize disabled:bg-gray-100"
-              >
-                <option value="viewer">Viewer</option>
-                <option value="treasurer">Treasurer</option>
-                <option value="admin">Admin</option>
-              </select>
+              <div className="flex items-center gap-2">
+                <select
+                  value={u.role}
+                  onChange={(e) => handleRoleChange(u._id, e.target.value)}
+                  disabled={u._id === currentUser._id}
+                  className="text-xs border rounded-lg px-2 py-1 capitalize disabled:bg-gray-100"
+                >
+                  <option value="viewer">Viewer</option>
+                  <option value="treasurer">Treasurer</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={() => startEditing(u)}
+                  className="text-xs font-semibold text-orange-600 hover:underline"
+                >
+                  Edit
+                </button>
+                {u._id !== currentUser._id && (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(u)}
+                    className="text-xs font-semibold text-red-600 hover:underline"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

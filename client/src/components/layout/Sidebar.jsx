@@ -1,15 +1,7 @@
 import { useEffect, useRef } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Avatar } from "../ui";
-
-const navigation = [
-  { path: "/dashboard", label: "Dashboard", icon: "home" },
-  { path: "/contributions", label: "Contributions", icon: "wallet" },
-  { path: "/expenses", label: "Expenses", icon: "credit-card" },
-  { path: "/categories", label: "Categories", icon: "folder" },
-  { path: "/pending", label: "Pending", icon: "clock" },
-  { path: "/settings", label: "Event Settings", icon: "settings" },
-];
+import { eventScopedNavigation as navigation } from "./navigation";
 
 const icons = {
   home: (
@@ -173,6 +165,8 @@ const Sidebar = ({
   currentEvent,
   events,
   onSelectEvent,
+  onSelectOverall,
+  isSuperAdmin = false,
   collapsed = false,
 }) => {
   const location = useLocation();
@@ -203,14 +197,9 @@ const Sidebar = ({
         {!collapsed && (
           <div className="flex items-center gap-3">
             <div className="size-10 rounded-xl bg-[var(--color-primary)] flex items-center justify-center">
-              <svg
-                className="size-6 text-white"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-              </svg>
+              <span className="text-xl" aria-hidden="true">
+                🪔
+              </span>
             </div>
             <div className="min-w-0">
               <h1 className="text-lg font-bold text-[var(--color-text-primary)] truncate">
@@ -225,14 +214,9 @@ const Sidebar = ({
         {collapsed && (
           <div className="flex items-center justify-center">
             <div className="size-10 rounded-xl bg-[var(--color-primary)] flex items-center justify-center">
-              <svg
-                className="size-6 text-white"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-              </svg>
+              <span className="text-xl" aria-hidden="true">
+                🪔
+              </span>
             </div>
           </div>
         )}
@@ -262,11 +246,18 @@ const Sidebar = ({
           );
         })}
 
-        {events.length > 1 && !collapsed && (
+        {isSuperAdmin && events.length > 0 && !collapsed && (
           <div className="pt-2 mt-2 border-t border-[var(--color-border)]">
             <p className="px-3 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wide mb-2">
               Events
             </p>
+            <button
+              onClick={onSelectOverall}
+              className={`sidebar-nav-item ${!currentEvent ? "sidebar-nav-item-active" : ""} w-full text-left`}
+            >
+              <span aria-hidden="true">#</span>
+              <span className="truncate">Overall</span>
+            </button>
             {events.map((event) => {
               const isActive = currentEvent?._id === event._id;
               return (

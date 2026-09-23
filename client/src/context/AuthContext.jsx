@@ -25,7 +25,12 @@ export const AuthProvider = ({ children }) => {
     setError("");
     try {
       const { data } = await loginUser({ phone, password });
-      const loggedInUser = { _id: data._id, name: data.name, role: data.role };
+      const loggedInUser = {
+        _id: data._id,
+        name: data.name,
+        role: data.role,
+        assignedEventId: data.assignedEventId || null,
+      };
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(loggedInUser));
       setUser(loggedInUser);

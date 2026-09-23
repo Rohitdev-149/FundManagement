@@ -1,133 +1,127 @@
-const Contributor = require("../models/Contributor");
-const Contribution = require("../models/Contribution");
-const { isMissing, isValidObjectId } = require("../utils/validation");
+const { isValidObjectId, parsePagination } = require("../utils/validation");
 
-const normalizeContributorPayload = (body, existingEventId) => {
-  const eventId = existingEventId || body.eventId;
-
-  if (isMissing(eventId) || isMissing(body.name)) {
-    return { error: "eventId and name are required" };
-  }
-
-  if (!isValidObjectId(eventId)) {
-    return { error: "Valid eventId is required" };
-  }
-
+const normalizePayload = (body) => {
   return {
     value: {
-      eventId,
       name: String(body.name).trim(),
       phone: body.phone ? String(body.phone).trim() : "",
     },
   };
 };
 
-// GET /api/contributors?eventId=xxx
 exports.getContributors = async (req, res) => {
   try {
-    const { eventId } = req.query;
-    if (!eventId || !isValidObjectId(eventId)) {
-      return res.status(400).json({ message: "Valid eventId is required" });
-    }
-
-    const contributors = await Contributor.find({ eventId }).sort({ name: 1 });
-    res.json(contributors);
+    const pagination = parsePagination(req.query);
+    if (pagination.error)
+      return res.status(400).json({ message: pagination.error });
+    res.json(
+      await req.eventModels.Contributor.find()
+        .sort({ name: 1 })
+        .skip(pagination.value.skip)
+        .limit(pagination.value.limit),
+    );
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Contributor request failed:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-// POST /api/contributors
 exports.createContributor = async (req, res) => {
   try {
-    const normalized = normalizeContributorPayload(req.body);
-    if (normalized.error) {
-      return res.status(400).json({ message: normalized.error });
-    }
-
-    const contributor = await Contributor.create(normalized.value);
-    res.status(201).json(contributor);
+    const normalized = normalizePayload(req.body);
+    const duplicate = await req.eventModels.Contributor.exists({
+      name: {
+        $regex: `^${normalized.value.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
+        $options: "i",
+      },
+      phone: normalized.value.phone,
+    });
+    if (duplicate)
+      return res.status(409).json({
+        message:
+          "A contributor with this name and phone already exists in this event",
+      });
+    res
+      .status(201)
+      .json(await req.eventModels.Contributor.create(normalized.value));
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Contributor request failed:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-// PUT /api/contributors/:id
 exports.updateContributor = async (req, res) => {
   try {
-    if (!isValidObjectId(req.params.id)) {
+    if (!isValidObjectId(req.params.id))
       return res
         .status(400)
         .json({ message: "Valid contributor id is required" });
-    }
-
-    const contributor = await Contributor.findById(req.params.id);
-    if (!contributor) {
-      return res.status(404).json({ message: "Contributor not found" });
-    }
-
-    const normalized = normalizeContributorPayload(
-      {
-        ...contributor.toObject(),
-        ...req.body,
-        eventId: contributor.eventId.toString(),
-      },
-      contributor.eventId,
+    const contributor = await req.eventModels.Contributor.findById(
+      req.params.id,
     );
-    if (normalized.error) {
+    if (!contributor)
+      return res.status(404).json({ message: "Contributor not found" });
+    const normalized = normalizePayload({
+      ...contributor.toObject(),
+      ...req.body,
+    });
+    if (normalized.error)
       return res.status(400).json({ message: normalized.error });
-    }
-
     Object.assign(contributor, normalized.value);
     await contributor.save();
     res.json(contributor);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Contributor request failed:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-// DELETE /api/contributors/:id
 exports.deleteContributor = async (req, res) => {
   try {
-    if (!isValidObjectId(req.params.id)) {
+    if (!isValidObjectId(req.params.id))
       return res
         .status(400)
         .json({ message: "Valid contributor id is required" });
-    }
-
-    const contributionCount = await Contribution.countDocuments({
-      contributorId: req.params.id,
-    });
-    if (contributionCount > 0) {
+    const contributionCount = await req.eventModels.Contribution.countDocuments(
+      {
+        contributorId: req.params.id,
+      },
+    );
+    if (contributionCount > 0)
       return res.status(409).json({
-        message: "Cannot delete a contributor with contribution history",
+        message: `Cannot delete: this contributor has ${contributionCount} contributions on record`,
       });
-    }
-
-    const contributor = await Contributor.findByIdAndDelete(req.params.id);
-    if (!contributor) {
+    const contributor = await req.eventModels.Contributor.findByIdAndDelete(
+      req.params.id,
+    );
+    if (!contributor)
       return res.status(404).json({ message: "Contributor not found" });
-    }
-    res.json({ message: "Contributor deleted" });
+    res.status(204).send();
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Contributor request failed:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-// GET /api/contributors/:id/history
 exports.getContributorHistory = async (req, res) => {
   try {
-    if (!isValidObjectId(req.params.id)) {
+    if (!isValidObjectId(req.params.id))
       return res
         .status(400)
         .json({ message: "Valid contributor id is required" });
-    }
-
-    const history = await Contribution.find({
-      contributorId: req.params.id,
-    }).sort({ date: -1 });
-    res.json(history);
+    const pagination = parsePagination(req.query);
+    if (pagination.error)
+      return res.status(400).json({ message: pagination.error });
+    res.json(
+      await req.eventModels.Contribution.find({
+        contributorId: req.params.id,
+      })
+        .sort({ date: -1 })
+        .skip(pagination.value.skip)
+        .limit(pagination.value.limit),
+    );
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Contributor request failed:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 };

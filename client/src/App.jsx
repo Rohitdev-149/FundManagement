@@ -12,7 +12,6 @@ const Contributions = lazy(() => import("./pages/Contributions"));
 const Expenses = lazy(() => import("./pages/Expenses"));
 const Categories = lazy(() => import("./pages/Categories"));
 const PendingContributions = lazy(() => import("./pages/PendingContributions"));
-const More = lazy(() => import("./pages/More"));
 const Settings = lazy(() => import("./pages/Settings"));
 
 const LoadingScreen = () => (
@@ -48,7 +47,6 @@ function App() {
                 path="/pending"
                 element={withLayout(PendingContributions)}
               />
-              <Route path="/more" element={withLayout(More)} />
               <Route path="/settings" element={withLayout(Settings)} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>

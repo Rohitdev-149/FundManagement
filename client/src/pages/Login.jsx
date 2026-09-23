@@ -17,20 +17,11 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)] px-4 py-8">
-      <div className="w-full max-w-md">
+    <div className="auth-shell">
+      <div className="auth-panel">
         <div className="text-center mb-8">
-          <div
-            className="inline-flex items-center justify-center size-16 rounded-2xl bg-[var(--color-primary)] mb-4"
-            aria-hidden="true"
-          >
-            <svg
-              className="size-10 text-white"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-            </svg>
+          <div className="auth-brand" aria-hidden="true">
+            🪔
           </div>
           <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">
             Ganpati Fund
@@ -38,7 +29,7 @@ const Login = () => {
           <p className="text-[var(--color-text-secondary)] mt-1">
             Mandal Fund Manager
           </p>
-          <p className="text-xs text-gray-400 mb-4">
+          <p className="text-xs text-[var(--color-text-tertiary)] mb-4">
             Don't have an account? Ask your mandal admin to create one for you.
           </p>
         </div>

@@ -9,7 +9,7 @@ const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { currentEvent, events, selectEvent } = useEvent();
+  const { currentEvent, events, selectEvent, selectOverall } = useEvent();
 
   return (
     <div className="app-shell">
@@ -22,6 +22,11 @@ const Layout = ({ children }) => {
         currentEvent={currentEvent}
         events={events}
         onSelectEvent={selectEvent}
+        onSelectOverall={() => {
+          selectOverall();
+          navigate("/dashboard");
+        }}
+        isSuperAdmin={user?.role === "superadmin"}
       />
       <div className="app-main">
         <header className="mobile-header lg:hidden">
@@ -37,7 +42,7 @@ const Layout = ({ children }) => {
           </button>
           <div className="flex min-w-0 items-center gap-2">
             <span className="brand-mark brand-mark-sm" aria-hidden="true">
-              ॐ
+              🪔
             </span>
             <span className="truncate text-sm font-bold tracking-tight">
               Ganpati Fund

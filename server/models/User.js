@@ -7,8 +7,13 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true },
     role: {
       type: String,
-      enum: ["admin", "treasurer", "viewer"],
+      enum: ["superadmin", "admin", "treasurer", "viewer"],
       default: "viewer",
+    },
+    assignedEventId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Event",
+      default: null,
     },
   },
   { timestamps: true },

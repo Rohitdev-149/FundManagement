@@ -11,27 +11,13 @@ const Table = forwardRef(
       renderRow,
       onRowClick,
       striped = true,
-      hoverable = true,
+      hoverable: _hoverable = true,
       mobileCard = true,
       mobileCardRender,
     },
-    ref
+    ref,
   ) => {
     const hasData = data.length > 0;
-
-    if (!hasData) {
-      return (
-        <div className="empty-state" role="status">
-          <div className="empty-state-icon" aria-hidden="true">
-            <svg className="size-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <p className="empty-state-title">No Data</p>
-          <p className="empty-state-description">{emptyMessage}</p>
-        </div>
-      );
-    }
 
     const mobileCardContent = useMemo(() => {
       if (!mobileCard) return null;
@@ -55,6 +41,31 @@ const Table = forwardRef(
         );
       });
     }, [data, columns, keyField, mobileCard, mobileCardRender]);
+
+    if (!hasData) {
+      return (
+        <div className="empty-state" role="status">
+          <div className="empty-state-icon" aria-hidden="true">
+            <svg
+              className="size-8"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+          </div>
+          <p className="empty-state-title">No Data</p>
+          <p className="empty-state-description">{emptyMessage}</p>
+        </div>
+      );
+    }
 
     return (
       <div className={`table-container ${className}`} ref={ref}>
@@ -94,7 +105,15 @@ const Table = forwardRef(
                   : {};
 
                 return (
-                  <tr key={key} {...rowProps} className={striped && rowIndex % 2 === 1 ? "bg-[var(--color-surface-hover)]" : ""}>
+                  <tr
+                    key={key}
+                    {...rowProps}
+                    className={
+                      striped && rowIndex % 2 === 1
+                        ? "bg-[var(--color-surface-hover)]"
+                        : ""
+                    }
+                  >
                     {columns.map((col) => (
                       <td
                         key={col.key}
@@ -103,8 +122,8 @@ const Table = forwardRef(
                         {renderRow
                           ? renderRow(row, rowIndex, col)
                           : col.render
-                          ? col.render(row, rowIndex)
-                          : row[col.key]}
+                            ? col.render(row, rowIndex)
+                            : row[col.key]}
                       </td>
                     ))}
                   </tr>
@@ -114,13 +133,17 @@ const Table = forwardRef(
           </table>
         </div>
         {mobileCard && (
-          <div className="block lg:hidden" role="list" aria-label="Mobile card view">
+          <div
+            className="block lg:hidden"
+            role="list"
+            aria-label="Mobile card view"
+          >
             {mobileCardContent}
           </div>
         )}
       </div>
     );
-  }
+  },
 );
 
 Table.displayName = "Table";

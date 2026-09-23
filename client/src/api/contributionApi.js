@@ -8,5 +8,5 @@ export const createContribution = (data) =>
   axiosClient.post("/contributions", data);
 export const updateContribution = (id, data) =>
   axiosClient.put(`/contributions/${id}`, data);
-export const deleteContribution = (id) =>
-  axiosClient.delete(`/contributions/${id}`);
+export const deleteContribution = (id, eventId) =>
+  axiosClient.delete(`/contributions/${id}?eventId=${eventId}`);

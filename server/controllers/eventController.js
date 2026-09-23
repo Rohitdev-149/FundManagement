@@ -1,5 +1,9 @@
 const Event = require("../models/Event");
 const {
+  databaseNameFromEventName,
+  ensureEventDatabase,
+} = require("../utils/eventDatabase");
+const {
   isMissing,
   isValidObjectId,
   parseNumber,
@@ -9,10 +13,6 @@ const normalizeEventPayload = (body) => {
   const totalBudget = isMissing(body.totalBudget)
     ? 0
     : parseNumber(body.totalBudget);
-
-  if (isMissing(body.name) || isMissing(body.startDate)) {
-    return { error: "name and startDate are required" };
-  }
 
   if (!Number.isFinite(totalBudget) || totalBudget < 0) {
     return { error: "Total budget must be zero or more" };
@@ -45,10 +45,13 @@ const normalizeEventPayload = (body) => {
 // GET /api/events
 exports.getEvents = async (req, res) => {
   try {
-    const events = await Event.find().sort({ startDate: -1 });
+    const filter =
+      req.user.role === "superadmin" ? {} : { _id: req.user.assignedEventId };
+    const events = await Event.find(filter).sort({ startDate: -1 });
     res.json(events);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Event request failed:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -60,13 +63,32 @@ exports.createEvent = async (req, res) => {
       return res.status(400).json({ message: normalized.error });
     }
 
+    const baseDbName = databaseNameFromEventName(normalized.value.name);
+    let dbName = baseDbName;
+    let suffix = 2;
+    while (
+      await Event.exists({
+        $or: [{ dbName }, { databaseName: dbName }],
+      })
+    ) {
+      dbName = `${baseDbName}_${suffix}`;
+      suffix += 1;
+    }
     const event = await Event.create({
       ...normalized.value,
+      dbName,
       createdBy: req.user._id,
     });
+    try {
+      await ensureEventDatabase(event);
+    } catch (provisionError) {
+      await Event.deleteOne({ _id: event._id });
+      throw provisionError;
+    }
     res.status(201).json(event);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Event request failed:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -79,6 +101,12 @@ exports.updateEvent = async (req, res) => {
 
     const event = await Event.findById(req.params.id);
     if (!event) return res.status(404).json({ message: "Event not found" });
+    if (
+      req.user.role !== "superadmin" &&
+      event._id.toString() !== req.user.assignedEventId.toString()
+    ) {
+      return res.status(403).json({ message: "Not permitted for this event" });
+    }
 
     const normalized = normalizeEventPayload({
       ...event.toObject(),
@@ -92,6 +120,7 @@ exports.updateEvent = async (req, res) => {
     await event.save();
     res.json(event);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Event request failed:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 };

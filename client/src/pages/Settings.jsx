@@ -17,7 +17,7 @@ const Settings = () => {
     if (formMode === "create") {
       selectEvent(data[0]);
     } else {
-      const stillExists = data.find((e) => e._id === currentEvent._id);
+      const stillExists = data.find((e) => e._id === currentEvent?._id);
       if (stillExists) selectEvent(stillExists);
     }
     setFormMode(null);
@@ -47,42 +47,52 @@ const Settings = () => {
         </button>
       </section>
 
-      {/* Event switcher — visible to everyone */}
+      {/* Event controls are only available to users who can manage events. */}
       <section className="bg-white rounded-xl shadow-sm p-4">
         <h2 className="font-semibold text-sm mb-3">Current Event</h2>
-        <select
-          value={currentEvent?._id || ""}
-          onChange={(e) =>
-            selectEvent(events.find((ev) => ev._id === e.target.value))
-          }
-          className="w-full border rounded-lg px-3 py-2 text-sm mb-3"
-        >
-          {events.map((ev) => (
-            <option key={ev._id} value={ev._id}>
-              {ev.name}
-            </option>
-          ))}
-        </select>
+        <p className="text-sm text-gray-700 mb-3">
+          {currentEvent?.name || "Overall dashboard"}
+        </p>
 
-        <RoleGate allow={["admin"]}>
+        <RoleGate allow={["superadmin"]}>
+          <select
+            value={currentEvent?._id || ""}
+            onChange={(e) =>
+              selectEvent(events.find((ev) => ev._id === e.target.value))
+            }
+            className="w-full border rounded-lg px-3 py-2 text-sm mb-3"
+          >
+            {events.map((ev) => (
+              <option key={ev._id} value={ev._id}>
+                {ev.name}
+              </option>
+            ))}
+          </select>
+        </RoleGate>
+
+        <RoleGate allow={["superadmin", "admin"]}>
           <div className="flex gap-2">
-            <button
-              onClick={() => setFormMode("edit")}
-              className="flex-1 border border-orange-600 text-orange-600 rounded-lg py-2 text-sm font-semibold"
-            >
-              Edit This Event
-            </button>
-            <button
-              onClick={() => setFormMode("create")}
-              className="flex-1 bg-orange-600 text-white rounded-lg py-2 text-sm font-semibold"
-            >
-              + New Event
-            </button>
+            {currentEvent && (
+              <button
+                onClick={() => setFormMode("edit")}
+                className="flex-1 border border-orange-600 text-orange-600 rounded-lg py-2 text-sm font-semibold"
+              >
+                Edit This Event
+              </button>
+            )}
+            <RoleGate allow={["superadmin"]}>
+              <button
+                onClick={() => setFormMode("create")}
+                className="flex-1 bg-orange-600 text-white rounded-lg py-2 text-sm font-semibold"
+              >
+                + New Event
+              </button>
+            </RoleGate>
           </div>
         </RoleGate>
       </section>
 
-      <RoleGate allow={["admin"]}>
+      <RoleGate allow={["superadmin", "admin"]}>
         <UserManagement />
       </RoleGate>
 

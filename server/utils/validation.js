@@ -38,6 +38,16 @@ const parseDateRange = (query) => {
   return { value: filter };
 };
 
+const parsePagination = (query) => {
+  const page = Number.parseInt(query.page || "1", 10);
+  const limit = Number.parseInt(query.limit || "50", 10);
+  if (!Number.isInteger(page) || page < 1)
+    return { error: "page must be a positive integer" };
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100)
+    return { error: "limit must be an integer between 1 and 100" };
+  return { value: { page, limit, skip: (page - 1) * limit } };
+};
+
 const outstandingAmount = (contribution) =>
   Math.max(
     Number(contribution.expectedAmount || 0) - Number(contribution.amount || 0),
@@ -49,6 +59,7 @@ module.exports = {
   isValidObjectId,
   outstandingAmount,
   parseDateRange,
+  parsePagination,
   parseNumber,
   toObjectId,
 };

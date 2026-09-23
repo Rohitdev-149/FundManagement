@@ -7,6 +7,7 @@ export const EventProvider = ({ children }) => {
   const { user } = useAuth();
   const [events, setEvents] = useState([]);
   const [currentEvent, setCurrentEvent] = useState(null);
+  const [isOverall, setIsOverall] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -15,6 +16,7 @@ export const EventProvider = ({ children }) => {
     if (!user) {
       setEvents([]);
       setCurrentEvent(null);
+      setIsOverall(false);
       setLoading(false);
       return undefined;
     }
@@ -27,8 +29,11 @@ export const EventProvider = ({ children }) => {
 
         setEvents(data);
         const savedId = localStorage.getItem("currentEventId");
+        const savedOverall =
+          user.role === "superadmin" && savedId === "overall";
         const match = data.find((event) => event._id === savedId);
-        setCurrentEvent(match || data[0] || null);
+        setCurrentEvent(savedOverall ? null : match || data[0] || null);
+        setIsOverall(savedOverall);
       } catch (err) {
         if (!ignore) {
           console.error("Failed to load events", err);
@@ -49,12 +54,28 @@ export const EventProvider = ({ children }) => {
   const selectEvent = (event) => {
     if (!event) return;
     setCurrentEvent(event);
+    setIsOverall(false);
     localStorage.setItem("currentEventId", event._id);
+  };
+
+  const selectOverall = () => {
+    if (user?.role !== "superadmin") return;
+    setCurrentEvent(null);
+    setIsOverall(true);
+    localStorage.setItem("currentEventId", "overall");
   };
 
   return (
     <EventContext.Provider
-      value={{ events, currentEvent, selectEvent, loading, setEvents }}
+      value={{
+        events,
+        currentEvent,
+        isOverall,
+        selectEvent,
+        selectOverall,
+        loading,
+        setEvents,
+      }}
     >
       {children}
     </EventContext.Provider>

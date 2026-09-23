@@ -8,6 +8,7 @@ const EventSettingsForm = ({ mode, existingEvent, onSaved, onCancel }) => {
   const [totalBudget, setTotalBudget] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [validationErrors, setValidationErrors] = useState([]);
 
   useEffect(() => {
     if (mode === "edit" && existingEvent) {
@@ -21,6 +22,7 @@ const EventSettingsForm = ({ mode, existingEvent, onSaved, onCancel }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setValidationErrors([]);
     setSaving(true);
     try {
       const payload = {
@@ -37,6 +39,7 @@ const EventSettingsForm = ({ mode, existingEvent, onSaved, onCancel }) => {
       onSaved();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to save event");
+      setValidationErrors(err.response?.data?.errors || []);
     } finally {
       setSaving(false);
     }
@@ -91,6 +94,15 @@ const EventSettingsForm = ({ mode, existingEvent, onSaved, onCancel }) => {
       />
 
       {error && <p className="text-red-500 text-sm">{error}</p>}
+      {validationErrors.length > 0 && (
+        <ul className="text-red-500 text-sm list-disc pl-5">
+          {validationErrors.map((item, index) => (
+            <li key={`${item.field}-${index}`}>
+              {item.field}: {item.message}
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div className="flex gap-2 pt-2">
         <button

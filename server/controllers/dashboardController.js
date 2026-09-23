@@ -1,157 +1,151 @@
-const Contribution = require("../models/Contribution");
-const Expense = require("../models/Expense");
-const Contributor = require("../models/Contributor");
-const ExpenseCategory = require("../models/ExpenseCategory");
-const {
-  isValidObjectId,
-  outstandingAmount,
-  toObjectId,
-} = require("../utils/validation");
+const Event = require("../models/Event");
+const { getEventModels } = require("../utils/eventDatabase");
+const { outstandingAmount } = require("../utils/validation");
 
-const receivedContributionFilter = (eventId) => ({
-  eventId,
-  status: { $in: ["paid", "partial"] },
-});
-
-const validateEventId = (eventId, res) => {
-  if (!isValidObjectId(eventId)) {
-    res.status(400).json({ message: "Valid eventId is required" });
-    return false;
-  }
-  return true;
+const calculateDashboard = async (models) => {
+  const [
+    received,
+    expenses,
+    contributorCount,
+    categoryCount,
+    pending,
+    recentContributions,
+    recentExpenses,
+  ] = await Promise.all([
+    models.Contribution.find({ status: { $in: ["paid", "partial"] } }),
+    models.Expense.find(),
+    models.Contributor.countDocuments(),
+    models.ExpenseCategory.countDocuments(),
+    models.Contribution.find({ status: { $in: ["pending", "partial"] } }),
+    models.Contribution.find()
+      .populate("contributorId", "name phone")
+      .sort({ date: -1, createdAt: -1 })
+      .limit(5),
+    models.Expense.find()
+      .populate("categoryId", "name icon budget")
+      .sort({ date: -1, createdAt: -1 })
+      .limit(5),
+  ]);
+  const totalCollection = received.reduce(
+    (sum, item) => sum + Number(item.amount || 0),
+    0,
+  );
+  const totalExpense = expenses.reduce(
+    (sum, item) => sum + Number(item.amount || 0),
+    0,
+  );
+  const cashIn = received
+    .filter((item) => item.paymentMode === "cash")
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const cashOut = expenses
+    .filter((item) => item.paymentMode === "cash")
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const upiBankIn = received
+    .filter((item) => item.paymentMode !== "cash")
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const upiBankOut = expenses
+    .filter((item) => item.paymentMode !== "cash")
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  return {
+    totalCollection,
+    totalExpense,
+    balance: totalCollection - totalExpense,
+    cashInHand: cashIn - cashOut,
+    upiBankBalance: upiBankIn - upiBankOut,
+    contributorCount,
+    categoryCount,
+    expenseCount: expenses.length,
+    totalPending: pending.reduce(
+      (sum, item) => sum + outstandingAmount(item),
+      0,
+    ),
+    recentContributions,
+    recentExpenses,
+  };
 };
 
-// GET /api/events/:eventId/dashboard
+exports.calculateDashboard = calculateDashboard;
+
 exports.getDashboard = async (req, res) => {
   try {
-    const { eventId } = req.params;
-    if (!validateEventId(eventId, res)) return;
-
-    const [
-      receivedContributions,
-      expenses,
-      contributorCount,
-      categoryCount,
-      pendingContributions,
-      recentContributions,
-      recentExpenses,
-    ] = await Promise.all([
-      Contribution.find(receivedContributionFilter(eventId)),
-      Expense.find({ eventId }),
-      Contributor.countDocuments({ eventId }),
-      ExpenseCategory.countDocuments({ eventId }),
-      Contribution.find({
-        eventId,
-        status: { $in: ["pending", "partial"] },
-      }),
-      Contribution.find({ eventId })
-        .populate("contributorId", "name phone")
-        .sort({ date: -1, createdAt: -1 })
-        .limit(5),
-      Expense.find({ eventId })
-        .populate("categoryId", "name icon budget")
-        .sort({ date: -1, createdAt: -1 })
-        .limit(5),
-    ]);
-
-    const totalCollection = receivedContributions.reduce(
-      (sum, contribution) => sum + Number(contribution.amount || 0),
-      0,
-    );
-    const totalExpense = expenses.reduce(
-      (sum, expense) => sum + Number(expense.amount || 0),
-      0,
-    );
-    const balance = totalCollection - totalExpense;
-
-    const cashIn = receivedContributions
-      .filter((contribution) => contribution.paymentMode === "cash")
-      .reduce((sum, contribution) => sum + Number(contribution.amount || 0), 0);
-    const cashOut = expenses
-      .filter((expense) => expense.paymentMode === "cash")
-      .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-    const cashInHand = cashIn - cashOut;
-
-    const upiBankIn = receivedContributions
-      .filter((contribution) => contribution.paymentMode !== "cash")
-      .reduce((sum, contribution) => sum + Number(contribution.amount || 0), 0);
-    const upiBankOut = expenses
-      .filter((expense) => expense.paymentMode !== "cash")
-      .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-    const upiBankBalance = upiBankIn - upiBankOut;
-
-    const totalPending = pendingContributions.reduce(
-      (sum, contribution) => sum + outstandingAmount(contribution),
-      0,
-    );
-
-    res.json({
-      totalCollection,
-      totalExpense,
-      balance,
-      cashInHand,
-      upiBankBalance,
-      contributorCount,
-      categoryCount,
-      expenseCount: expenses.length,
-      totalPending,
-      recentContributions,
-      recentExpenses,
-    });
+    res.json(await calculateDashboard(req.eventModels));
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Dashboard request failed:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-// GET /api/events/:eventId/reports/category-wise
+exports.getOverallDashboard = async (req, res) => {
+  try {
+    const events = await Event.find().sort({ startDate: -1 });
+    const perEvent = await Promise.all(
+      events.map(async (event) => ({
+        eventId: event._id,
+        eventName: event.name,
+        ...(await calculateDashboard(await getEventModels(event._id))),
+      })),
+    );
+    const fields = [
+      "totalCollection",
+      "totalExpense",
+      "balance",
+      "cashInHand",
+      "upiBankBalance",
+      "contributorCount",
+      "categoryCount",
+      "expenseCount",
+      "totalPending",
+    ];
+    const totals = Object.fromEntries(
+      fields.map((field) => [
+        field,
+        perEvent.reduce((sum, item) => sum + item[field], 0),
+      ]),
+    );
+    res.json({ ...totals, perEvent });
+  } catch (err) {
+    console.error("Overall dashboard request failed:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 exports.categoryWiseReport = async (req, res) => {
   try {
-    const { eventId } = req.params;
-    if (!validateEventId(eventId, res)) return;
-
-    const result = await Expense.aggregate([
-      { $match: { eventId: toObjectId(eventId) } },
-      { $group: { _id: "$categoryId", total: { $sum: "$amount" } } },
-      {
-        $lookup: {
-          from: "expensecategories",
-          localField: "_id",
-          foreignField: "_id",
-          as: "category",
+    res.json(
+      await req.eventModels.Expense.aggregate([
+        { $group: { _id: "$categoryId", total: { $sum: "$amount" } } },
+        {
+          $lookup: {
+            from: "expensecategories",
+            localField: "_id",
+            foreignField: "_id",
+            as: "category",
+          },
         },
-      },
-      { $unwind: "$category" },
-      {
-        $project: {
-          _id: 0,
-          categoryId: "$_id",
-          name: "$category.name",
-          icon: "$category.icon",
-          total: 1,
+        { $unwind: "$category" },
+        {
+          $project: {
+            _id: 0,
+            categoryId: "$_id",
+            name: "$category.name",
+            icon: "$category.icon",
+            total: 1,
+          },
         },
-      },
-      { $sort: { total: -1 } },
-    ]);
-    res.json(result);
+        { $sort: { total: -1 } },
+      ]),
+    );
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Dashboard request failed:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-// GET /api/events/:eventId/reports/date-wise
 exports.dateWiseReport = async (req, res) => {
   try {
-    const { eventId } = req.params;
-    if (!validateEventId(eventId, res)) return;
-
     const [contributionsByDate, expensesByDate] = await Promise.all([
-      Contribution.aggregate([
-        {
-          $match: {
-            eventId: toObjectId(eventId),
-            status: { $in: ["paid", "partial"] },
-          },
-        },
+      req.eventModels.Contribution.aggregate([
+        { $match: { status: { $in: ["paid", "partial"] } } },
         {
           $group: {
             _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
@@ -160,8 +154,7 @@ exports.dateWiseReport = async (req, res) => {
         },
         { $sort: { _id: 1 } },
       ]),
-      Expense.aggregate([
-        { $match: { eventId: toObjectId(eventId) } },
+      req.eventModels.Expense.aggregate([
         {
           $group: {
             _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
@@ -171,53 +164,41 @@ exports.dateWiseReport = async (req, res) => {
         { $sort: { _id: 1 } },
       ]),
     ]);
-
     res.json({ contributionsByDate, expensesByDate });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Dashboard request failed:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-// GET /api/events/:eventId/reports/budget-vs-actual
 exports.budgetVsActual = async (req, res) => {
   try {
-    const { eventId } = req.params;
-    if (!validateEventId(eventId, res)) return;
-
-    const categories = await ExpenseCategory.find({ eventId }).sort({
+    const categories = await req.eventModels.ExpenseCategory.find().sort({
       name: 1,
     });
-    const categoryIds = categories.map((category) => category._id);
-    const spentByCategory = await Expense.aggregate([
-      {
-        $match: {
-          eventId: toObjectId(eventId),
-          categoryId: { $in: categoryIds },
-        },
-      },
+    const spent = await req.eventModels.Expense.aggregate([
       { $group: { _id: "$categoryId", total: { $sum: "$amount" } } },
     ]);
-
     const spentMap = new Map(
-      spentByCategory.map((row) => [row._id.toString(), row.total]),
+      spent.map((row) => [row._id.toString(), row.total]),
     );
-
-    const result = categories.map((category) => {
-      const spentAmount = spentMap.get(category._id.toString()) || 0;
-      const budget = Number(category.budget || 0);
-      return {
-        categoryId: category._id,
-        name: category.name,
-        icon: category.icon,
-        budget,
-        spent: spentAmount,
-        remaining: budget - spentAmount,
-        overBudget: budget > 0 && spentAmount > budget,
-      };
-    });
-
-    res.json(result);
+    res.json(
+      categories.map((category) => {
+        const spentAmount = spentMap.get(category._id.toString()) || 0;
+        const budget = Number(category.budget || 0);
+        return {
+          categoryId: category._id,
+          name: category.name,
+          icon: category.icon,
+          budget,
+          spent: spentAmount,
+          remaining: budget - spentAmount,
+          overBudget: budget > 0 && spentAmount > budget,
+        };
+      }),
+    );
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Dashboard request failed:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 };

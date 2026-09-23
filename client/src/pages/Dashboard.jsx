@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useEvent } from "../context/eventContext";
 import {
   getDashboard,
+  getOverallDashboard,
   getCategoryWiseReport,
   getDateWiseReport,
   getBudgetVsActual,
@@ -27,8 +28,10 @@ const Dashboard = () => {
   const { user } = useAuth();
   const {
     currentEvent,
+    isOverall,
     events,
     selectEvent,
+    selectOverall,
     loading: eventsLoading,
   } = useEvent();
   const [stats, setStats] = useState(null);
@@ -38,7 +41,7 @@ const Dashboard = () => {
   const [recentExpenses, setRecentExpenses] = useState([]);
 
   const fetchStats = useCallback(async () => {
-    if (!currentEvent) {
+    if (!currentEvent && !isOverall) {
       setStats(null);
       setRecentContributions([]);
       setRecentExpenses([]);
@@ -55,10 +58,18 @@ const Dashboard = () => {
         dateResponse,
         budgetResponse,
       ] = await Promise.all([
-        getDashboard(currentEvent._id),
-        getCategoryWiseReport(currentEvent._id),
-        getDateWiseReport(currentEvent._id),
-        getBudgetVsActual(currentEvent._id),
+        isOverall ? getOverallDashboard() : getDashboard(currentEvent._id),
+        isOverall
+          ? Promise.resolve({ data: [] })
+          : getCategoryWiseReport(currentEvent._id),
+        isOverall
+          ? Promise.resolve({
+              data: { contributionsByDate: [], expensesByDate: [] },
+            })
+          : getDateWiseReport(currentEvent._id),
+        isOverall
+          ? Promise.resolve({ data: [] })
+          : getBudgetVsActual(currentEvent._id),
       ]);
       const data = dashboardResponse.data;
       setStats({
@@ -74,7 +85,7 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentEvent]);
+  }, [currentEvent, isOverall]);
 
   useEffect(() => {
     fetchStats();
@@ -84,7 +95,7 @@ const Dashboard = () => {
     return <SkeletonDashboard />;
   }
 
-  if (!currentEvent) {
+  if (!currentEvent && !isOverall) {
     return (
       <div className="page-shell">
         <EmptyState
@@ -122,24 +133,29 @@ const Dashboard = () => {
     <div className="page-shell">
       <div className="page-header">
         <div className="min-w-0">
-          <h1 className="page-title truncate">{currentEvent.name}</h1>
+          <h1 className="page-title truncate">
+            {isOverall ? "Overall" : currentEvent.name}
+          </h1>
           <p className="page-subtitle">
             Welcome back, {user?.name}{" "}
             <span className="text-[var(--color-primary)]">•</span> {user?.role}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {events.length > 1 && (
+          {user?.role === "superadmin" && events.length > 0 && (
             <select
-              value={currentEvent._id}
+              value={isOverall ? "overall" : currentEvent._id}
               onChange={(e) =>
-                selectEvent(
-                  events.find((event) => event._id === e.target.value),
-                )
+                e.target.value === "overall"
+                  ? selectOverall()
+                  : selectEvent(
+                      events.find((event) => event._id === e.target.value),
+                    )
               }
               className="form-input form-select py-2 px-3 text-sm hidden sm:block"
               aria-label="Select event"
             >
+              <option value="overall">Overall</option>
               {events.map((event) => (
                 <option key={event._id} value={event._id}>
                   {event.name}
@@ -149,6 +165,31 @@ const Dashboard = () => {
           )}
         </div>
       </div>
+
+      <section className="event-pulse">
+        <div className="event-pulse-kicker">
+          <span aria-hidden="true">✦</span>
+          {isOverall ? "Mandal overview" : "Event pulse"}
+        </div>
+        <h2 className="event-pulse-title">
+          {isOverall
+            ? "A clear view of every celebration"
+            : `Let’s make ${currentEvent.name} memorable`}
+        </h2>
+        <p className="event-pulse-meta">
+          {isOverall
+            ? "All event collections, expenses, and balances in one place."
+            : "Your finances, contributions, and expenses are ready when you are."}
+        </p>
+        <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold">
+          <span className="rounded-full bg-white/15 px-3 py-1.5 backdrop-blur-sm">
+            🪔 Organized
+          </span>
+          <span className="rounded-full bg-white/15 px-3 py-1.5 backdrop-blur-sm">
+            📊 Up to date
+          </span>
+        </div>
+      </section>
 
       {error && (
         <div
