@@ -1,10 +1,12 @@
 const mongoose = require("mongoose");
 const Event = require("../models/Event");
+const GlobalUser = require("../models/User");
 const { getEventConnection } = require("../config/dbManager");
 const contributorModel = require("../models/factories/contributorModel");
 const contributionModel = require("../models/factories/contributionModel");
 const expenseCategoryModel = require("../models/factories/expenseCategoryModel");
 const expenseModel = require("../models/factories/expenseModel");
+const userModel = require("../models/factories/userModel");
 
 const databaseNameFromEventName = (name) => {
   const safeName = String(name)
@@ -32,6 +34,7 @@ const getEventModels = async (eventId) => {
     Contribution: contributionModel(connection),
     ExpenseCategory: expenseCategoryModel(connection),
     Expense: expenseModel(connection),
+    User: userModel(connection),
   };
 };
 
@@ -52,8 +55,36 @@ const ensureEventDatabase = async (event) => {
     );
 };
 
+const migrateLegacyUsers = async () => {
+  const legacyUsers = await GlobalUser.find({ role: { $ne: "superadmin" } });
+  for (const legacyUser of legacyUsers) {
+    if (!legacyUser.assignedEventId) {
+      console.warn(`Skipping user ${legacyUser._id}: no event assigned`);
+      continue;
+    }
+    const models = await getEventModels(legacyUser.assignedEventId);
+    if (!models) {
+      console.warn(`Skipping user ${legacyUser._id}: event not found`);
+      continue;
+    }
+    try {
+      await models.User.create(legacyUser.toObject());
+      await GlobalUser.deleteOne({ _id: legacyUser._id });
+    } catch (err) {
+      if (err?.code === 11000) {
+        console.warn(
+          `Skipping user ${legacyUser._id}: duplicate phone in event database`,
+        );
+      } else {
+        throw err;
+      }
+    }
+  }
+};
+
 module.exports = {
   databaseNameFromEventName,
   ensureEventDatabase,
   getEventModels,
+  migrateLegacyUsers,
 };

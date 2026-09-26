@@ -61,8 +61,12 @@ const UserManagement = () => {
       setEditingUser(null);
       await loadUsers();
     } catch (err) {
+      const validationMessage = err.response?.data?.errors
+        ?.map((item) => item.message)
+        .join(", ");
       setError(
-        err.response?.data?.message ||
+        validationMessage ||
+          err.response?.data?.message ||
           (editingUser ? "Failed to update user" : "Failed to create user"),
       );
     } finally {

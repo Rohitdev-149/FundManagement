@@ -8,6 +8,7 @@ const rateLimit = require("express-rate-limit");
 const mongoose = require("mongoose");
 const connectDB = require("./config/db");
 const { closeEventConnections } = require("./config/dbManager");
+const { migrateLegacyUsers } = require("./utils/eventDatabase");
 
 const requiredEnv = ["MONGO_URI", "JWT_SECRET"];
 const missingEnv = requiredEnv.filter((key) => !process.env[key]);
@@ -84,6 +85,9 @@ const startServer = async () => {
   const server = app.listen(PORT, () =>
     console.log(`Server running on port ${PORT}`),
   );
+  migrateLegacyUsers().catch((err) => {
+    console.error("Legacy user migration failed:", err.message);
+  });
 
   const shutdown = async (signal) => {
     console.log(`${signal} received, shutting down`);
