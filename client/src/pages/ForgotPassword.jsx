@@ -15,10 +15,7 @@ const ForgotPassword = () => {
     setLoading(true);
     setError("");
     try {
-      const response = await forgotPassword({
-        email: email.trim(),
-        origin: window.location.origin,
-      });
+      const response = await forgotPassword({ email: email.trim() });
       setMessage(response.data.message);
     } catch (requestError) {
       setError(

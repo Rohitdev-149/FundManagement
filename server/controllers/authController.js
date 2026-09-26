@@ -100,14 +100,7 @@ exports.forgotPassword = async (req, res) => {
     user.passwordResetExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
     await user.save();
 
-    const requestedOrigin = req.body.origin;
-    const configuredOrigins = (process.env.CORS_ORIGIN || "")
-      .split(",")
-      .map((origin) => origin.trim().replace(/\/$/, ""))
-      .filter(Boolean);
-    const appUrl = (requestedOrigin && configuredOrigins.includes(requestedOrigin.replace(/\/$/, ""))
-      ? requestedOrigin
-      : process.env.CLIENT_URL || configuredOrigins[0] || "http://localhost:5173")
+    const appUrl = (process.env.CLIENT_URL || "http://localhost:5173")
       .split(",")[0]
       .trim()
       .replace(/\/$/, "");

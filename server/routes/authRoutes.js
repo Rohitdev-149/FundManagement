@@ -78,7 +78,9 @@ router.post(
   "/forgot-password",
   [
     emailValidation,
-    body("origin").optional().isURL({ protocols: ["http", "https"] }),
+    body("origin")
+      .optional()
+      .isURL({ protocols: ["http", "https"] }),
   ],
   validateRequest,
   forgotPassword,
