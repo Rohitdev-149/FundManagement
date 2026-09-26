@@ -6,9 +6,24 @@ import EventSettingsForm from "../components/shared/EventSettingsForm";
 import RoleGate from "../components/shared/RoleGate";
 import UserManagement from "../components/shared/UserManagement";
 const Settings = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
+  const [email, setEmail] = useState(user?.email || "");
+  const [emailMessage, setEmailMessage] = useState("");
+  const [emailError, setEmailError] = useState("");
   const { events, currentEvent, selectEvent, setEvents } = useEvent();
   const [formMode, setFormMode] = useState(null); // null | 'create' | 'edit'
+
+  const saveEmail = async (event) => {
+    event.preventDefault();
+    setEmailMessage("");
+    setEmailError("");
+    try {
+      await updateProfile({ email: email.trim() });
+      setEmailMessage("Email updated");
+    } catch (error) {
+      setEmailError(error.response?.data?.message || "Unable to update email");
+    }
+  };
 
   const refreshEvents = async () => {
     const { data } = await getEvents();
@@ -38,6 +53,36 @@ const Settings = () => {
             <span className="text-gray-500">Role:</span>{" "}
             <span className="capitalize">{user?.role}</span>
           </p>
+          {user?.role === "superadmin" && (
+            <form onSubmit={saveEmail} className="pt-3 space-y-2">
+              <label
+                className="block text-xs text-gray-500"
+                htmlFor="superadmin-email"
+              >
+                Gmail / Email for password reset
+              </label>
+              <input
+                id="superadmin-email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+                className="w-full border rounded-lg px-3 py-2 text-sm"
+              />
+              {emailMessage && (
+                <p className="text-xs text-green-600">{emailMessage}</p>
+              )}
+              {emailError && (
+                <p className="text-xs text-red-600">{emailError}</p>
+              )}
+              <button
+                type="submit"
+                className="bg-orange-600 text-white rounded-lg px-3 py-2 text-sm font-semibold"
+              >
+                Save email
+              </button>
+            </form>
+          )}
         </div>
         <button
           onClick={logout}

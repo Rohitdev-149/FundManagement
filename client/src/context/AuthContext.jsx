@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { loginUser } from "../api/authApi";
+import {
+  loginUser,
+  updateProfile as updateProfileRequest,
+} from "../api/authApi";
 import { AuthContext } from "./authContext";
 
 const readStoredUser = () => {
@@ -29,6 +32,7 @@ export const AuthProvider = ({ children }) => {
         _id: data._id,
         name: data.name,
         role: data.role,
+        email: data.email || null,
         assignedEventId: data.assignedEventId || null,
       };
       localStorage.setItem("token", data.token);
@@ -49,8 +53,18 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const updateProfile = async (data) => {
+    const { data: updatedUser } = await updateProfileRequest(data);
+    const nextUser = { ...user, email: updatedUser.email };
+    localStorage.setItem("user", JSON.stringify(nextUser));
+    setUser(nextUser);
+    return nextUser;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, error }}>
+    <AuthContext.Provider
+      value={{ user, login, logout, updateProfile, loading, error }}
+    >
       {children}
     </AuthContext.Provider>
   );

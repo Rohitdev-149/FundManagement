@@ -5,7 +5,12 @@ import { Button, Input } from "../components/ui";
 
 const Register = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", phone: "", password: "" });
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    password: "",
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -21,6 +26,7 @@ const Register = () => {
       await registerUser({
         name: form.name.trim(),
         phone: form.phone.trim(),
+        email: form.email.trim(),
         password: form.password,
       });
       navigate("/login");
@@ -63,6 +69,14 @@ const Register = () => {
           autoComplete="tel"
           inputMode="numeric"
           maxLength={10}
+        />
+        <Input
+          label="Gmail / Email"
+          type="email"
+          value={form.email}
+          onChange={update("email")}
+          required
+          autoComplete="email"
         />
         <Input
           label="Password"

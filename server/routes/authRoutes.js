@@ -8,6 +8,9 @@ const {
   updateUserRole,
   updateUser,
   deleteUser,
+  forgotPassword,
+  resetPassword,
+  updateProfile,
 } = require("../controllers/authController");
 const { protect } = require("../middleware/auth");
 const { allowRoles } = require("../middleware/role");
@@ -21,9 +24,16 @@ const {
   USER_ROLES,
 } = require("../middleware/validation");
 
+const emailValidation = body("email")
+  .trim()
+  .isEmail()
+  .withMessage("email must be valid")
+  .normalizeEmail();
+
 const registrationValidation = [
   requiredText("name"),
   phoneField(),
+  emailValidation,
   body("password")
     .isLength({ min: 8 })
     .withMessage("password must be at least 8 characters"),
@@ -64,6 +74,34 @@ const userUpdateValidation = [
 
 router.post("/register", registrationValidation, validateRequest, register);
 router.post("/login", loginValidation, validateRequest, login);
+router.post(
+  "/forgot-password",
+  [
+    emailValidation,
+    body("origin").optional().isURL({ protocols: ["http", "https"] }),
+  ],
+  validateRequest,
+  forgotPassword,
+);
+router.post(
+  "/reset-password",
+  [
+    requiredText("token"),
+    body("password")
+      .isLength({ min: 8 })
+      .withMessage("password must be at least 8 characters"),
+  ],
+  validateRequest,
+  resetPassword,
+);
+router.put(
+  "/profile",
+  protect,
+  allowRoles("superadmin"),
+  emailValidation,
+  validateRequest,
+  updateProfile,
+);
 
 router.post(
   "/create-user",

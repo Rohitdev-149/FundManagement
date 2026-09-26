@@ -4,6 +4,7 @@ const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     phone: { type: String, required: true, unique: true },
+    email: { type: String, lowercase: true, trim: true, sparse: true },
     passwordHash: { type: String, required: true },
     role: {
       type: String,
@@ -15,6 +16,8 @@ const userSchema = new mongoose.Schema(
       ref: "Event",
       default: null,
     },
+    passwordResetTokenHash: { type: String, select: false },
+    passwordResetExpiresAt: { type: Date, select: false },
   },
   { timestamps: true },
 );

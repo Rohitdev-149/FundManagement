@@ -1,8 +1,10 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const GlobalUser = require("../models/User");
 const Event = require("../models/Event");
 const { getEventModels } = require("../utils/eventDatabase");
+const { sendPasswordResetEmail } = require("../utils/mailer");
 
 const generateToken = (user, eventId = null) =>
   jwt.sign(
@@ -15,6 +17,7 @@ const publicUser = (user) => ({
   _id: user._id,
   name: user.name,
   phone: user.phone,
+  email: user.email || null,
   role: user.role,
   assignedEventId: user.assignedEventId || null,
 });
@@ -59,10 +62,11 @@ exports.register = async (req, res) => {
           "Registration is closed. Ask an existing admin to create your account.",
       });
     }
-    const { name, phone, password } = req.body;
+    const { name, phone, password, email } = req.body;
     const user = await GlobalUser.create({
       name,
       phone,
+      email: email.toLowerCase(),
       passwordHash: await bcrypt.hash(password, 10),
       role: "superadmin",
       assignedEventId: null,
@@ -76,6 +80,93 @@ exports.register = async (req, res) => {
           ? "Phone already registered"
           : "Internal server error",
     });
+  }
+};
+
+exports.forgotPassword = async (req, res) => {
+  const genericResponse = {
+    message: "If an account exists for this email, a reset link has been sent.",
+  };
+  try {
+    const email = req.body.email.toLowerCase();
+    const user = await GlobalUser.findOne({ role: "superadmin", email });
+    if (!user) return res.json(genericResponse);
+
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    user.passwordResetTokenHash = crypto
+      .createHash("sha256")
+      .update(rawToken)
+      .digest("hex");
+    user.passwordResetExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
+    await user.save();
+
+    const requestedOrigin = req.body.origin;
+    const configuredOrigins = (process.env.CORS_ORIGIN || "")
+      .split(",")
+      .map((origin) => origin.trim().replace(/\/$/, ""))
+      .filter(Boolean);
+    const appUrl = (requestedOrigin && configuredOrigins.includes(requestedOrigin.replace(/\/$/, ""))
+      ? requestedOrigin
+      : process.env.CLIENT_URL || configuredOrigins[0] || "http://localhost:5173")
+      .split(",")[0]
+      .trim()
+      .replace(/\/$/, "");
+    await sendPasswordResetEmail(
+      user.email,
+      `${appUrl}/reset-password?token=${rawToken}`,
+    );
+    return res.json(genericResponse);
+  } catch (err) {
+    console.error("Password reset request failed:", err);
+    return res.status(500).json({ message: "Unable to send reset email" });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const tokenHash = crypto
+      .createHash("sha256")
+      .update(req.body.token)
+      .digest("hex");
+    const user = await GlobalUser.findOne({
+      role: "superadmin",
+      passwordResetTokenHash: tokenHash,
+      passwordResetExpiresAt: { $gt: new Date() },
+    }).select("+passwordResetTokenHash +passwordResetExpiresAt");
+    if (!user)
+      return res
+        .status(400)
+        .json({ message: "Reset link is invalid or expired" });
+
+    user.passwordHash = await bcrypt.hash(req.body.password, 10);
+    user.passwordResetTokenHash = undefined;
+    user.passwordResetExpiresAt = undefined;
+    await user.save();
+    res.json({ message: "Password reset successful. You can now log in." });
+  } catch (err) {
+    console.error("Password reset failed:", err);
+    res.status(500).json({ message: "Unable to reset password" });
+  }
+};
+
+exports.updateProfile = async (req, res) => {
+  try {
+    const email = req.body.email.toLowerCase();
+    const existing = await GlobalUser.findOne({
+      email,
+      _id: { $ne: req.user._id },
+    });
+    if (existing)
+      return res.status(409).json({ message: "Email already registered" });
+    const user = await GlobalUser.findByIdAndUpdate(
+      req.user._id,
+      { email },
+      { new: true, runValidators: true },
+    ).select("name phone email role assignedEventId");
+    res.json(user);
+  } catch (err) {
+    console.error("Profile update failed:", err);
+    res.status(500).json({ message: "Unable to update profile" });
   }
 };
 
