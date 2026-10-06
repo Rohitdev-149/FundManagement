@@ -13,13 +13,14 @@ const Input = forwardRef(
       rightIcon,
       ...props
     },
-    ref
+    ref,
   ) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
     const errorId = error ? `${inputId}-error` : undefined;
     const hintId = hint ? `${inputId}-hint` : undefined;
 
-    const describedBy = [errorId, hintId].filter(Boolean).join(" ") || undefined;
+    const describedBy =
+      [errorId, hintId].filter(Boolean).join(" ") || undefined;
 
     return (
       <div className={`form-group ${className}`}>
@@ -44,7 +45,7 @@ const Input = forwardRef(
             {...props}
           />
           {rightIcon && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] size-5 pointer-events-none" aria-hidden="true">
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] size-5">
               {rightIcon}
             </div>
           )}
@@ -61,7 +62,7 @@ const Input = forwardRef(
         )}
       </div>
     );
-  }
+  },
 );
 
 Input.displayName = "Input";
